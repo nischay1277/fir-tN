@@ -1,0 +1,16 @@
+asr:
+  primary:
+    name: Systran/faster-whisper-large-v3
+    backend: faster-whisper
+    compute_type: int8
+    language: ta
+
+translation:
+  primary:
+    name: Helsinki-NLP/opus-mt-dra-en
+    backend: transformers
+
+statute_id:
+  primary:
+    name: tfidf+ovr-logistic
+    backend: scikit-learn

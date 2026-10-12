@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tn-fir-speech"
+version = "0.1.0"
+description = "Officer-assisted Tamil speech to IF-1 drafting prototype"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "fastapi>=0.116,<1",
+  "uvicorn[standard]>=0.35,<1",
+  "python-multipart>=0.0.20,<1",
+  "pydantic>=2.11,<3",
+  "PyYAML>=6.0,<7",
+]
+
+[project.optional-dependencies]
+speech = [
+  "faster-whisper>=1.2,<2",
+  "huggingface-hub>=0.34,<2",
+  "nvidia-cublas-cu12>=12.4,<13; sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "nvidia-cudnn-cu12>=9,<10; sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "torch>=2.7,<3",
+  "transformers>=4.54,<6",
+  "sentencepiece>=0.2,<1",
+  "sacremoses>=0.1,<1",
+]
+legal = [
+  "joblib>=1.5,<2",
+  "langgraph>=0.6,<2",
+  "numpy>=2.0,<3",
+  "scikit-learn>=1.7,<2",
+  "scipy>=1.15,<2",
+]
+full = [
+  "faster-whisper>=1.2,<2",
+  "huggingface-hub>=0.34,<2",
+  "nvidia-cublas-cu12>=12.4,<13; sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "nvidia-cudnn-cu12>=9,<10; sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "torch>=2.7,<3",
+  "transformers>=4.54,<6",
+  "sentencepiece>=0.2,<1",
+  "sacremoses>=0.1,<1",
+  "joblib>=1.5,<2",
+  "langgraph>=0.6,<2",
+  "numpy>=2.0,<3",
+  "scikit-learn>=1.7,<2",
+  "scipy>=1.15,<2",
+]
+
+[project.scripts]
+tn-fir = "fir.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fir"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

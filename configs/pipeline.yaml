@@ -1,0 +1,40 @@
+statute_id:
+  default_classifier: tfidf
+  tfidf:
+    ngram_range: [1, 2]
+    min_df: 3
+    max_features: 200000
+    sublinear_tf: true
+    vectorizer: auto
+    hashing_above_docs: 20000
+    hashing_features: 262144
+    hashing_chunk_docs: 8000
+    C: 4.0
+    max_iter: 1000
+    n_jobs: 2
+
+ipc_bns:
+  map_path: data/mapping/ipc_bns_map.csv
+  auto_apply_confidence: [high]
+  auto_apply_requires_no_review_flag: true
+
+asr:
+  model: Systran/faster-whisper-large-v3
+  compute_type: int8
+  device: auto
+  language: auto
+  beam_size: 5
+  vad_filter: true
+  condition_on_previous_text: false
+  temperature: 0.0
+  batch_size: 0
+  repetition_penalty: 1.0
+  no_repeat_ngram_size: 0
+  initial_prompt: "தமிழில் English words வரலாம்: mobile, phone, address, number, time, date. English words English எழுத்திலேயே எழுதப்படும்."
+  hotwords: "mobile, phone, address, number, time, date, police station, CCTV, FIR, WhatsApp, bike, car, bus stand"
+
+translate:
+  model: Helsinki-NLP/opus-mt-dra-en
+  device: auto
+  min_tamil_share: 0.3
+  max_new_tokens: 256
