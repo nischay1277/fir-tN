@@ -43,7 +43,7 @@ if [[ -n "$CUDA_LIBRARY_PATH" ]]; then
   export LD_LIBRARY_PATH="$CUDA_LIBRARY_PATH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi
 
-uv run --extra full uvicorn fir.serving.app:app --reload --host 127.0.0.1 --port 8000 &
+uv run --extra full uvicorn fir.serving.app:app --host 127.0.0.1 --port 8000 &
 BACKEND_PID=$!
 
 (

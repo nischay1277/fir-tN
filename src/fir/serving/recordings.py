@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import hashlib
 import json
@@ -37,6 +37,8 @@ def storage_dir() -> Path:
 def _ensure_dir() -> Path:
     root = storage_dir()
     root.mkdir(parents=True, mode=0o700, exist_ok=True)
+    if os.name == "nt":
+    	return root
     if root.is_symlink() or not root.is_dir() or stat.S_IMODE(root.stat().st_mode) & 0o077:
         raise RuntimeError(f'Recordings directory must be a private directory (0700): {root}')
     return root
@@ -185,3 +187,6 @@ def public_metadata(metadata: dict) -> dict:
         'audio_url': f"/v1/recordings/{metadata['id']}/audio",
         'drafts': metadata.get('drafts', []),
     }
+
+
+
