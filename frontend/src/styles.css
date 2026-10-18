@@ -343,6 +343,21 @@ textarea {
   margin-bottom: 18px;
 }
 
+.evidence-summary,
+.clarification-panel {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--mantine-color-gray-3, #dee2e6);
+  border-radius: 0.65rem;
+  background: #fbfcfc;
+}
+
+.evidence-summary h3,
+.clarification-panel h3 { margin: 0 0 0.35rem; }
+.evidence-summary p,
+.muted-copy { color: #66737a; font-size: 0.86rem; line-height: 1.45; }
+.clarification-panel .mantine-Textarea-root { margin: 0.7rem 0; }
+
 .review-copy .mantine-Alert-root {
   max-width: 620px;
 }

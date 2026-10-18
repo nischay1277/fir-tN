@@ -95,7 +95,25 @@ export interface LegalDecision {
   cue_hits: Array<Record<string, unknown>>
   route: 'FIR' | 'CSR' | 'OFFICER_REVIEW'
   rationale: string
+  clarification_questions?: ClarificationQuestion[]
+  evidence_graph?: EvidenceGraph
   [key: string]: unknown
+}
+
+export interface ClarificationQuestion {
+  id: string
+  section: string
+  ingredient: string
+  question: string
+  priority: string
+  reason: string
+}
+
+export interface EvidenceGraph {
+  nodes: Array<Record<string, unknown>>
+  edges: Array<Record<string, string>>
+  questions: ClarificationQuestion[]
+  summary: { fact_count: number; section_count: number; ingredient_count: number; satisfied_count: number; unclear_count: number; question_count: number }
 }
 
 export interface DraftResponse {

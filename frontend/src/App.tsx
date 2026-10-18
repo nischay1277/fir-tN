@@ -32,7 +32,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { FirFormPreview } from './FirFormPreview'
-import type { Capabilities, DraftResponse, RecordingDetail, RecordingStatus, RecordingSummary, SpeechProcessResponse, TextTranslationResponse } from './types'
+import type { Capabilities, ClarificationQuestion, DraftResponse, RecordingDetail, RecordingStatus, RecordingSummary, SpeechProcessResponse, TextTranslationResponse } from './types'
 
 const emptyCapabilities: Capabilities = {
   speech_ready: false,
@@ -122,6 +122,8 @@ export function App() {
   const [isTranslating, setIsTranslating] = useState(false)
   const [draft, setDraft] = useState<DraftResponse | null>(null)
   const [isDrafting, setIsDrafting] = useState(false)
+  const [clarificationAnswers, setClarificationAnswers] = useState<Record<string, string>>({})
+  const [isClarifying, setIsClarifying] = useState(false)
   const [draftView, setDraftView] = useState<'form' | 'rendered' | 'markdown'>('form')
   const [reviewOpen, reviewControls] = useDisclosure(false)
   const [stream, setStream] = useState<MediaStream | null>(null)
@@ -184,6 +186,7 @@ export function App() {
       const result = await response.json() as DraftResponse
       if (requestId !== draftRequest.current) return
       setDraft(result)
+      setClarificationAnswers({})
       if (result.decision?.errors?.length) setError(result.decision.errors.join(' '))
       void fetchRecordings()
       reviewControls.open()
@@ -193,6 +196,29 @@ export function App() {
       }
     } finally {
       if (requestId === draftRequest.current) setIsDrafting(false)
+    }
+  }
+
+  const applyClarifications = async () => {
+    if (!draft || !tamil.trim() || !english.trim()) return
+    setIsClarifying(true)
+    setError(null)
+    try {
+      const answers = Object.entries(clarificationAnswers).filter(([, answer]) => answer.trim()).map(([id, answer]) => {
+        const question = (draft.decision.clarification_questions ?? []).find((item) => item.id === id)
+        return { id, ingredient: question?.ingredient ?? id, answer }
+      })
+      const response = await fetch('/v1/complaint/clarify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ narrative: tamil, translation_en: english.trim(), recording_id: activeRecording?.id ?? null, annotate: true, answers }),
+      })
+      if (!response.ok) throw new Error(await responseError(response))
+      setDraft(await response.json() as DraftResponse)
+      setClarificationAnswers({})
+    } catch (requestError) {
+      setError(apiError(requestError instanceof Error ? requestError.message : ''))
+    } finally {
+      setIsClarifying(false)
     }
   }
 
@@ -236,6 +262,7 @@ export function App() {
     setRecording('processing')
     setError(null)
     setDraft(null)
+    setClarificationAnswers({})
     setActiveRecording(null)
     setTranscriptEdited(false)
     setAsrStatus(null)
@@ -350,6 +377,7 @@ export function App() {
       setTranscriptEdited(false)
       setReviewAcknowledged(false)
       setDraft(null)
+    setClarificationAnswers({})
       setTranslationStatus(detail.translation_en ? 'complete' : 'failed')
       setTranslationError(null)
       reviewControls.open()
@@ -384,6 +412,8 @@ export function App() {
   const canUpload = recording === 'idle'
   const downstreamReady = capabilities.classification_ready && capabilities.legal_data_ready
   const sections = draft?.decision?.suggested_sections ?? []
+  const questions = draft?.decision?.clarification_questions ?? []
+  const evidenceSummary = draft?.decision?.evidence_graph?.summary
 
   return (
     <div className="app-shell">
@@ -623,6 +653,22 @@ export function App() {
                           </li>
                         ))}
                       </ul>
+                    )}
+                    {draft && evidenceSummary && (
+                      <div className="evidence-summary">
+                        <h3>Evidence graph</h3>
+                        <p>{evidenceSummary.fact_count} extracted facts linked to {evidenceSummary.ingredient_count} statutory ingredients. {evidenceSummary.satisfied_count} supported; {evidenceSummary.unclear_count} need clarification.</p>
+                      </div>
+                    )}
+                    {draft && questions.length > 0 && (
+                      <div className="clarification-panel">
+                        <h3>Clarification questions</h3>
+                        <p className="muted-copy">Answer these missing-ingredient prompts, then apply them to refresh the legal mapping and IF-1 draft.</p>
+                        {questions.map((item: ClarificationQuestion) => (
+                          <Textarea key={item.id} label={`${item.section}: ${item.ingredient}`} description={item.question} value={clarificationAnswers[item.id] ?? ''} onChange={(event) => setClarificationAnswers((current) => ({ ...current, [item.id]: event.currentTarget.value }))} autosize minRows={2} />
+                        ))}
+                        <Button size="sm" variant="light" onClick={() => void applyClarifications()} loading={isClarifying} disabled={!Object.values(clarificationAnswers).some((answer) => answer.trim())}>Apply clarifications</Button>
+                      </div>
                     )}
                     <Alert variant="light" color="blue" icon={<IconAlertCircle size={16} />}>
                       Compare the recording, transcript and English text before generating a draft.

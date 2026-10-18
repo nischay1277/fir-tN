@@ -48,6 +48,8 @@ class SliceState(TypedDict, total=False):
     if1_text: str
     fill_report: dict
     narrative_grounded: bool
+    evidence_graph: dict
+    clarification_questions: list[dict]
     errors: Annotated[list[str], _extend]
 
 def make_asr_node(asr: Any):
@@ -141,6 +143,19 @@ def cognizability_node(state: SliceState) -> dict:
             rationale = f'original narrative evidences possibly cognizable offence(s) the classifier did not predict: {names}' + (f'; {result.rationale}' if result.rationale else '')
     return {'route': route, 'rationale': rationale, 'cognizability': {s: c.value for s, c in result.per_section.items()}}
 
+def evidence_node(state: SliceState) -> dict:
+    from fir.statute.evidence import build_evidence_graph
+    graph = build_evidence_graph(
+        narrative=state.get('narrative') or '',
+        extracted_spans=state.get('extracted_spans') or [],
+        predicted_ipc=state.get('predicted_ipc') or [],
+        review_queue=state.get('review_queue') or [],
+        cue_hits=state.get('cue_hits') or [],
+        bns_sections=state.get('bns_sections') or [],
+        route=state.get('route') or '',
+    )
+    return {'evidence_graph': graph, 'clarification_questions': graph.get('questions', [])}
+
 def extract_node(state: SliceState) -> dict:
     from dataclasses import asdict as _asdict
     from fir.extract.rules import iter_spans
@@ -179,6 +194,7 @@ def build_slice_graph(classifier: StatuteClassifier, asr: Any=None, ipc_map: Ipc
     g.add_node('statute_id', make_statute_node(classifier, threshold))
     g.add_node('ipc_bns', make_ipc_bns_node(ipc_map))
     g.add_node('cognizability_check', cognizability_node)
+    g.add_node('evidence', evidence_node)
     g.add_node('instantiate', instantiate_node)
     g.add_conditional_edges(START, _entry, {'asr': 'asr', 'extract': 'extract'})
     g.add_edge('asr', 'extract')
@@ -186,7 +202,8 @@ def build_slice_graph(classifier: StatuteClassifier, asr: Any=None, ipc_map: Ipc
     g.add_edge('translate', 'statute_id')
     g.add_edge('statute_id', 'ipc_bns')
     g.add_edge('ipc_bns', 'cognizability_check')
-    g.add_edge('cognizability_check', 'instantiate')
+    g.add_edge('cognizability_check', 'evidence')
+    g.add_edge('evidence', 'instantiate')
     g.add_edge('instantiate', END)
     return g.compile()
 

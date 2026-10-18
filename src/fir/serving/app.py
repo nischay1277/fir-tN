@@ -71,6 +71,9 @@ class TextComplaint(BaseModel):
     recording_id: str | None = None
     annotate: bool = True
 
+class ClarificationRequest(TextComplaint):
+    answers: list[dict[str, str]] = Field(default_factory=list)
+
 class TextTranslation(BaseModel):
     text: str = Field(min_length=1)
 
@@ -93,6 +96,8 @@ class DraftResponse(BaseModel):
     elapsed_ms: int
     recording_id: str | None = None
     disclaimer: str = 'Draft for officer review. The officer remains the author of record.'
+    evidence_graph: dict[str, Any] = Field(default_factory=dict)
+    clarification_questions: list[dict[str, Any]] = Field(default_factory=list)
 
 def _module_available(name: str) -> bool:
     return importlib.util.find_spec(name) is not None
@@ -225,7 +230,7 @@ class DraftRuntime:
         if state.get('errors') and (not state.get('fir_record')):
             raise HTTPException(status_code=500, detail='; '.join(state['errors']))
         record = FirRecord.model_validate(state['fir_record'])
-        response = DraftResponse(decision=to_decision(state), record=record, if1_text=render_if1(record, annotate=annotate) if annotate else state['if1_text'], if1_markdown=render_if1_markdown(record, annotate=annotate, source_ta=narrative, source_en=translation_en or '', from_audio=bool(recording_id)), narrative_grounded=bool(state.get('narrative_grounded')), narrative_en=state.get('narrative_en') if state.get('translation') else None, translation=state.get('translation') or {}, asr_flags=list(state.get('asr_flags') or []), fill_report=state.get('fill_report') or {}, elapsed_ms=int((time.perf_counter() - started) * 1000), recording_id=recording_id)
+        response = DraftResponse(decision=to_decision(state), record=record, if1_text=render_if1(record, annotate=annotate) if annotate else state['if1_text'], if1_markdown=render_if1_markdown(record, annotate=annotate, source_ta=narrative, source_en=translation_en or '', from_audio=bool(recording_id)), narrative_grounded=bool(state.get('narrative_grounded')), narrative_en=state.get('narrative_en') if state.get('translation') else None, translation=state.get('translation') or {}, asr_flags=list(state.get('asr_flags') or []), fill_report=state.get('fill_report') or {}, elapsed_ms=int((time.perf_counter() - started) * 1000), recording_id=recording_id, evidence_graph=state.get('evidence_graph') or {}, clarification_questions=list(state.get('clarification_questions') or []))
         from fir.serving import audit
         audit.append(audit.entry_for(response))
         if recording_id:
@@ -331,6 +336,17 @@ def translate_text(body: TextTranslation) -> TranslationResponse:
 def analyze_complaint(body: TextComplaint) -> DraftResponse:
     try:
         return draft_runtime.run(body.narrative.strip(), body.annotate, body.translation_en, body.recording_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+@app.post('/v1/complaint/clarify', response_model=DraftResponse)
+def clarify_complaint(body: ClarificationRequest) -> DraftResponse:
+    additions = [f"Officer clarification for {item.get('ingredient', item.get('id', 'item'))}: {item.get('answer', '').strip()}" for item in body.answers if item.get('answer', '').strip()]
+    narrative = body.narrative.strip()
+    if additions:
+        narrative = narrative + '\n' + '\n'.join(additions)
+    try:
+        return draft_runtime.run(narrative, body.annotate, body.translation_en, body.recording_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
