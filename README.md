@@ -1,5 +1,9 @@
 # Tamil Speech to FIR Drafting
 
+**Stack:** Python, FastAPI, Pydantic, Whisper, LangGraph, React, TypeScript.
+
+**Workflow:** Transcribe Tamil or mixed Tamil-English audio, extract structured complaint facts, and review a deterministic IF-1 draft with source evidence. Candidate statutory sections remain suggestions for human review.
+
 An officer-assisted prototype for turning Tamil or Tamil-English complaints into structured facts, candidate statutory sections, clarification questions, and an IF-1-style draft. It includes a FastAPI backend, LangGraph orchestration, and a React/TypeScript review interface.
 
 This repository provides a drafting and review aid. It does not register an FIR or connect to police filing systems. Candidate provisions and generated fields require officer review; this is not a claim of deployment or endorsement by Tamil Nadu Police.
